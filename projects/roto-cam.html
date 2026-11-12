@@ -161,7 +161,8 @@ input[type=range] { width: 100%; accent-color: var(--cobalt); }
   </div>
 </div>
 
-<video id="vid" playsinline muted loop hidden></video>
+<!-- kept rendered but off-screen: Safari stops decoding frames of a display:none video -->
+<video id="vid" playsinline muted autoplay style="position:fixed;left:-9999px;top:0;width:2px;height:2px;opacity:0;pointer-events:none" aria-hidden="true"></video>
 
 <script>
 const $ = s => document.querySelector(s);
@@ -228,10 +229,10 @@ toggle("freeze", "freeze");
 let mode = "demo", stream = null, fileURL = null;
 const msg = t => { $("#msg").textContent = t; $("#msg").hidden = !t; };
 
-function useVideo(label) {
-  vid.addEventListener("loadedmetadata", () => size(vid.videoWidth, vid.videoHeight), { once: true });
-  vid.play().catch(() => {});
+async function useVideo(label) {
   mode = "video"; $("#tag").textContent = label; $("#stop").disabled = false;
+  try { await vid.play(); }
+  catch { msg("The video didn't start. Click Start camera again."); }
 }
 function stopAll() {
   if (stream) stream.getTracks().forEach(t => t.stop());
@@ -242,18 +243,44 @@ function stopAll() {
   $("#cam").textContent = "Start camera";
 }
 
+/* front camera first; once it's on, the button flips between front and back (phones) */
+let facing = "user", multiCam = false;
+const CAM_ERRORS = {
+  NotAllowedError: "Camera access is blocked. Click the camera icon in the address bar, choose Allow, then press Start camera again.",
+  NotFoundError: "No camera found. Plug one in, or pick a video file instead.",
+  NotReadableError: "Another app is using your camera (Zoom, Teams, Discord, the Camera app…). Close it, then press Start camera again.",
+  SecurityError: "This page has to be opened over https:// to use the camera.",
+};
+async function openCamera() {
+  const tries = [
+    { video: { facingMode: facing, width: { ideal: 640 }, height: { ideal: 480 } }, audio: false },
+    { video: true, audio: false }, // fallback for cameras that reject the size or facing hints
+  ];
+  let last;
+  for (const c of tries) {
+    try { return await navigator.mediaDevices.getUserMedia(c); }
+    catch (err) { last = err; if (err.name === "NotAllowedError" || err.name === "SecurityError") break; }
+  }
+  throw last;
+}
 $("#cam").addEventListener("click", async () => {
-  if (!navigator.mediaDevices?.getUserMedia) { msg("This browser can't open a camera here. Pick a video file instead."); return; }
+  if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+    msg("This browser can't open a camera on this page. Open it over https:// in Chrome, Edge, Firefox or Safari, or pick a video file instead.");
+    return;
+  }
+  if (stream && multiCam) facing = facing === "user" ? "environment" : "user";
+  $("#cam").textContent = "Opening…";
   try {
     stopAll();
-    stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" }, audio: false });
+    stream = await openCamera();
     vid.srcObject = stream; vid.loop = false;
-    msg(""); useVideo("live camera"); $("#cam").textContent = "Camera on";
+    ctl.mirror = facing === "user"; $("#mirror").setAttribute("aria-pressed", ctl.mirror);
+    msg(""); await useVideo("live camera");
+    try { multiCam = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === "videoinput").length > 1; } catch {}
+    $("#cam").textContent = multiCam ? "Switch camera" : "Restart camera";
   } catch (err) {
-    stream = null;
-    msg(err.name === "NotAllowedError"
-      ? "The camera was blocked. Allow camera access for this site and try again, or pick a video file instead. (Inside the Claude preview the camera is always blocked; it works once the site is hosted on its own.)"
-      : "Couldn't find a camera. Plug one in, or pick a video file instead.");
+    stream = null; $("#cam").textContent = "Start camera";
+    msg(CAM_ERRORS[err?.name] || `The camera didn't start (${err?.name || "unknown error"}). Try again, or pick a video file instead.`);
   }
 });
 $("#file").addEventListener("change", e => {
@@ -374,7 +401,8 @@ function loop(now) {
     if (!reduce) demoT += gap / 1000;
     drawDemo(demoT);
   } else {
-    if (vid.readyState < 2) return;
+    if (vid.readyState < 2 || !vid.videoWidth) return;
+    if (Math.round(TW * vid.videoHeight / vid.videoWidth) !== TH) size(vid.videoWidth, vid.videoHeight);
     sctx.save();
     if (ctl.mirror) { sctx.translate(TW, 0); sctx.scale(-1, 1); }
     sctx.drawImage(vid, 0, 0, TW, TH);
