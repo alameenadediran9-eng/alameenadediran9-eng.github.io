@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Zine Machine</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Courier+Prime:wght@400;700&family=Caveat:wght@500;700&family=Archivo:wght@400;600&display=swap">
+<style>
+/* Layout: editor on the left, the folded pages and the one-sheet print layout on the right. Stacks on phones. */
+:root {
+  --bg: #e7e8ec;
+  --panel: #f7f7f9;
+  --ink: #111114;
+  --muted: #5d5f6b;
+  --pink: #ff48b0;
+  --blue: #0078bf;
+  --line: #c9cbd3;
+  --display: "Archivo Black", "Arial Black", Impact, sans-serif;
+  --body: "Archivo", "Segoe UI", system-ui, sans-serif;
+  --mono: "Courier Prime", "Courier New", monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #16161b; --panel: #202027; --ink: #f1f1f4; --muted: #a3a5b2; --pink: #ff6cc0; --blue: #4fb0ff; --line: #3a3a45; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #16161b; --panel: #202027; --ink: #f1f1f4; --muted: #a3a5b2; --pink: #ff6cc0; --blue: #4fb0ff; --line: #3a3a45; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; }
+.wrap {
+  max-width: 1240px; margin: 0 auto; padding-block: 24px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; grid-template-columns: minmax(0, 380px) minmax(0, 1fr); gap: 28px;
+}
+@media (max-width: 860px) { .wrap { grid-template-columns: minmax(0, 1fr); } }
+h1 { font-family: var(--display); font-size: 40px; line-height: .95; margin: 0 0 6px; letter-spacing: -.01em; }
+h1 span { color: var(--pink); }
+.lede { color: var(--muted); margin: 0 0 18px; line-height: 1.5; }
+.editor { display: grid; gap: 12px; align-content: start; }
+label { display: grid; gap: 5px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+input, textarea, select {
+  font: 15px var(--body); color: var(--ink); background: var(--panel); border: 1.5px solid var(--line);
+  border-radius: 8px; padding: 9px 11px; text-transform: none; letter-spacing: 0; font-weight: 400; width: 100%;
+}
+textarea { min-height: 300px; font-family: var(--mono); font-size: 14px; line-height: 1.5; resize: vertical; }
+:focus-visible { outline: 3px solid var(--pink); outline-offset: 1px; }
+.hint { font-size: 13px; color: var(--muted); line-height: 1.45; margin: 0; }
+.styles { display: flex; gap: 6px; flex-wrap: wrap; }
+.styles button { border: 1.5px solid var(--ink); background: var(--panel); color: var(--ink); border-radius: 999px; padding: 6px 14px; font: 600 13px var(--body); cursor: pointer; }
+.styles button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.go { font: 15px var(--display); background: var(--pink); color: #fff; border: 0; border-radius: 10px; padding: 13px 18px; cursor: pointer; letter-spacing: .02em; }
+.go[disabled] { opacity: .5; cursor: default; }
+.status { font-size: 13px; color: var(--muted); min-height: 1.2em; margin: 0; }
+.out { display: grid; gap: 20px; align-content: start; min-width: 0; }
+.kicker { font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); margin: 0 0 8px; }
+.pages { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 600px) { .pages { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.pages figure { margin: 0; display: grid; gap: 4px; }
+.pages canvas { width: 100%; height: auto; border-radius: 3px; box-shadow: 0 1px 0 var(--line), 0 6px 14px rgba(0,0,0,.12); }
+.pages figcaption { font-family: var(--mono); font-size: 11px; color: var(--muted); text-align: center; }
+#sheet { width: 100%; height: auto; display: block; border-radius: 4px; box-shadow: 0 10px 30px rgba(0,0,0,.18); }
+ol.fold { margin: 0; padding-left: 20px; line-height: 1.6; color: var(--muted); font-size: 14px; }
+</style>
+
+<div class="wrap">
+  <section class="editor">
+    <div>
+      <h1>Zine<br><span>Machine</span></h1>
+      <p class="lede">Turn notes into an eight-page mini zine you can print on one sheet and fold.</p>
+    </div>
+    <label for="title">Title<input id="title" value="Small Rooms"></label>
+    <label for="byline">Byline<input id="byline" value="notes by Your Name"></label>
+    <label for="notes">Pages
+      <textarea id="notes" spellcheck="true"># Why rooms
+I keep a list of rooms I liked. Not houses, rooms. The kitchen with the radio. The library stairwell.
+---
+# The kitchen
+Yellow walls. A clock that ran four minutes fast so nobody was ever late.
+---
+# The stairwell
+Cold stone and a window that faced the car park. Best place to read in the whole building.
+---
+# The bus shelter
+Technically a room. It had a roof, a bench, and a timetable nobody trusted.
+---
+# My desk, 2am
+One lamp. Tea gone cold. The only time the house is quiet enough to think.
+---
+# Your turn
+Draw a room you liked here.</textarea>
+    </label>
+    <p class="hint">Separate pages with a line of three dashes (---). Start a line with # for a page heading. Six inside pages fit.</p>
+    <label for="back">Back cover<input id="back" value="Printed at home. Pass it on."></label>
+    <div>
+      <p class="kicker" style="margin-bottom:6px">Style</p>
+      <div class="styles" id="styles" role="group" aria-label="Zine style">
+        <button type="button" data-s="copy" aria-pressed="true">Photocopy</button>
+        <button type="button" data-s="riso" aria-pressed="false">Riso</button>
+        <button type="button" data-s="note" aria-pressed="false">Notebook</button>
+      </div>
+    </div>
+    <button class="go" id="save" type="button">Save print sheet (PNG)</button>
+    <p class="status" id="status" role="status"></p>
+  </section>
+
+  <section class="out">
+    <div>
+      <p class="kicker">Your zine, in reading order</p>
+      <div class="pages" id="pages"></div>
+    </div>
+    <div>
+      <p class="kicker">Print sheet · landscape letter or A4</p>
+      <canvas id="sheet" width="2200" height="1700" aria-label="Print layout of all eight pages on one sheet"></canvas>
+    </div>
+    <div>
+      <p class="kicker">How to fold it</p>
+      <ol class="fold">
+        <li>Print the sheet landscape, at full size.</li>
+        <li>Fold it in half the long way, then unfold. Fold it in half the short way, then in half again.</li>
+        <li>Unfold to the half-sheet, and cut along the center crease from the folded edge to the middle.</li>
+        <li>Open it up, fold the long way, and push the ends together so the cut opens into a cross. Flatten into a booklet.</li>
+      </ol>
+    </div>
+  </section>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+let style = "copy";
+const STYLES = {
+  copy: { paper: "#fbfbf8", ink: "#141414", accent: "#141414", head: "Archivo Black", body: "Courier Prime", grain: true },
+  riso: { paper: "#f6f1e8", ink: "#0078bf", accent: "#ff48b0", head: "Archivo Black", body: "Archivo", grain: true },
+  note: { paper: "#fdfdfb", ink: "#1d3fb8", accent: "#e0475b", head: "Caveat", body: "Caveat", lines: true },
+};
+const PW = 550, PH = 850;
+
+function pages() {
+  const parts = $("#notes").value.split(/^\s*---\s*$/m).map(s => s.trim());
+  const inner = Array.from({ length: 6 }, (_, i) => parts[i] || "");
+  return [
+    { kind: "cover", title: $("#title").value, byline: $("#byline").value },
+    ...inner.map(t => {
+      const lines = t.split("\n"); let head = "";
+      if (lines[0]?.startsWith("#")) head = lines.shift().replace(/^#+\s*/, "");
+      return { kind: "page", head, text: lines.join("\n").trim() };
+    }),
+    { kind: "back", text: $("#back").value },
+  ];
+}
+
+function wrap(ctx, text, maxW) {
+  const out = [];
+  for (const para of text.split("\n")) {
+    if (!para.trim()) { out.push(""); continue; }
+    let line = "";
+    for (const w of para.split(/\s+/)) {
+      const t = line ? line + " " + w : w;
+      if (ctx.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t;
+    }
+    out.push(line);
+  }
+  return out;
+}
+
+// draws one page into a PW x PH box at the current transform
+function drawPage(ctx, p, n) {
+  const S = STYLES[style];
+  ctx.save();
+  ctx.fillStyle = S.paper; ctx.fillRect(0, 0, PW, PH);
+  if (S.lines) {
+    ctx.strokeStyle = "rgba(29,63,184,.16)"; ctx.lineWidth = 2;
+    for (let y = 120; y < PH - 40; y += 44) { ctx.beginPath(); ctx.moveTo(30, y); ctx.lineTo(PW - 30, y); ctx.stroke(); }
+    ctx.strokeStyle = "rgba(224,71,91,.4)"; ctx.beginPath(); ctx.moveTo(70, 0); ctx.lineTo(70, PH); ctx.stroke();
+  }
+  const pad = 54, isNote = style === "note";
+  if (p.kind === "cover") {
+    if (style === "riso") { ctx.fillStyle = S.accent; ctx.globalAlpha = .9; ctx.beginPath(); ctx.arc(PW * .62, PH * .62, 210, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; }
+    if (style === "copy") { ctx.fillStyle = S.ink; ctx.fillRect(pad, pad, PW - pad * 2, 14); }
+    ctx.fillStyle = S.ink;
+    ctx.font = `${isNote ? 700 : 400} ${isNote ? 120 : 96}px "${S.head}"`;
+    const lines = wrap(ctx, (p.title || "Untitled").toUpperCase().replace(/./g, c => isNote ? c.toLowerCase() : c), PW - pad * 2);
+    let y = 200;
+    for (const l of lines) { ctx.fillText(l, pad, y); y += isNote ? 110 : 96; }
+    ctx.font = `${isNote ? 500 : 400} ${isNote ? 44 : 26}px "${S.body}"`;
+    ctx.fillText(p.byline || "", pad, PH - pad - 10);
+  } else if (p.kind === "back") {
+    ctx.fillStyle = S.ink;
+    ctx.font = `${isNote ? 500 : 400} ${isNote ? 44 : 26}px "${S.body}"`;
+    const lines = wrap(ctx, p.text || "", PW - pad * 2);
+    let y = PH / 2 - lines.length * 18;
+    for (const l of lines) { ctx.fillText(l, pad, y); y += isNote ? 48 : 36; }
+    ctx.fillStyle = S.accent; ctx.fillRect(pad, PH - pad - 8, 60, 8);
+  } else {
+    let y = isNote ? 104 : 120;
+    if (p.head) {
+      ctx.fillStyle = S.accent;
+      ctx.font = `${isNote ? 700 : 400} ${isNote ? 66 : 46}px "${S.head}"`;
+      for (const l of wrap(ctx, p.head, PW - pad * 2)) { ctx.fillText(l, pad, y); y += isNote ? 60 : 50; }
+      y += isNote ? 10 : 20;
+    }
+    ctx.fillStyle = S.ink;
+    const size = isNote ? 40 : 25, lh = isNote ? 44 : 38;
+    ctx.font = `${isNote ? 500 : 400} ${size}px "${S.body}"`;
+    if (isNote) y = Math.ceil((y - 120) / 44) * 44 + 112;
+    for (const l of wrap(ctx, p.text, PW - pad * 2)) { if (y > PH - 80) break; ctx.fillText(l, pad, y); y += lh; }
+    ctx.font = `400 20px "${STYLES.copy.body}"`; ctx.fillStyle = S.ink; ctx.globalAlpha = .6;
+    ctx.fillText(String(n), PW / 2 - 6, PH - 30); ctx.globalAlpha = 1;
+  }
+  if (S.grain) {
+    ctx.globalAlpha = .05; ctx.fillStyle = "#000";
+    for (let i = 0; i < 900; i++) ctx.fillRect((i * 7919) % PW, (i * 104729) % PH, 2, 2);
+    ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+}
+
+// one-sheet layout: top row upside down (5 4 3 2), bottom row 6 7 8 1
+const LAYOUT = [[5, 4, 3, 2], [6, 7, 8, 1]];
+function drawSheet() {
+  const ps = pages(), c = $("#sheet"), ctx = c.getContext("2d");
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height);
+  LAYOUT.forEach((row, r) => row.forEach((n, col) => {
+    ctx.save();
+    if (r === 0) { ctx.translate((col + 1) * PW, PH); ctx.rotate(Math.PI); } else ctx.translate(col * PW, PH);
+    drawPage(ctx, ps[n - 1], n);
+    ctx.restore();
+  }));
+  ctx.strokeStyle = "rgba(0,0,0,.15)"; ctx.setLineDash([10, 10]); ctx.lineWidth = 2;
+  for (let i = 1; i < 4; i++) { ctx.beginPath(); ctx.moveTo(i * PW, 0); ctx.lineTo(i * PW, c.height); ctx.stroke(); }
+  ctx.beginPath(); ctx.moveTo(0, PH); ctx.lineTo(c.width, PH); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.strokeStyle = "rgba(255,72,176,.9)"; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(PW, PH); ctx.lineTo(PW * 3, PH); ctx.stroke();
+
+  const names = ["Cover", "2", "3", "4", "5", "6", "7", "Back"];
+  $("#pages").innerHTML = names.map((n, i) => `<figure><canvas width="${PW}" height="${PH}"></canvas><figcaption>${n}</figcaption></figure>`).join("");
+  $("#pages").querySelectorAll("canvas").forEach((cv, i) => drawPage(cv.getContext("2d"), ps[i], i + 1));
+}
+
+let t;
+const redraw = () => { clearTimeout(t); t = setTimeout(drawSheet, 120); };
+["#title", "#byline", "#notes", "#back"].forEach(s => $(s).addEventListener("input", redraw));
+$("#styles").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  style = b.dataset.s;
+  document.querySelectorAll("#styles button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  drawSheet();
+});
+
+drawSheet();
+Promise.all(["Archivo Black", "Courier Prime", "Caveat", "Archivo"].map(f => document.fonts.load(`40px "${f}"`))).then(drawSheet, drawSheet);
+
+// saving goes through the viewer's downloads capability
+let downloads = null;
+$("#save").disabled = true;
+$("#status").textContent = "Checking whether saving is available…";
+(async () => {
+  try { downloads = await window.claude?.use?.("downloads"); } catch {}
+  $("#save").disabled = !downloads;
+  $("#status").textContent = downloads ? "" : "Saving isn't available in this view. You can right-click the print sheet and save the image instead.";
+})();
+$("#save").addEventListener("click", () => {
+  $("#sheet").toBlob(async blob => {
+    const name = ($("#title").value.trim() || "zine").toLowerCase().replace(/[^a-z0-9]+/g, "-") + "-print-sheet.png";
+    try { await downloads.save({ filename: name, data: blob }); $("#status").textContent = "Saved " + name; }
+    catch (e) { $("#status").textContent = e?.code === "declined" ? "Save canceled." : "Couldn't save the file here. Right-click the print sheet and save the image instead."; }
+  }, "image/png");
+});
+</script>

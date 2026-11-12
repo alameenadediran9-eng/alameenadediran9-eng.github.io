@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Plant Diary</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Karla:wght@400;600;700&display=swap">
+<style>
+/* Layout: a single column of plant cards, thirstiest first, with the add form at the top like a seed packet. */
+:root {
+  --bg: #eef3ec;
+  --card: #ffffff;
+  --ink: #17301f;
+  --muted: #5a7062;
+  --leaf: #2f7a46;
+  --leaf-soft: #d5ead9;
+  --dry: #c4621d;
+  --dry-soft: #fbe3d1;
+  --line: #cfdcd1;
+  --display: "Young Serif", Georgia, serif;
+  --body: "Karla", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1a13; --card: #17251c; --ink: #e3efe6; --muted: #98b0a0; --leaf: #6cc58a; --leaf-soft: #1f3a29; --dry: #f0965a; --dry-soft: #3b2518; --line: #2a3d30; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #0f1a13; --card: #17251c; --ink: #e3efe6; --muted: #98b0a0; --leaf: #6cc58a; --leaf-soft: #1f3a29; --dry: #f0965a; --dry-soft: #3b2518; --line: #2a3d30; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; }
+.wrap {
+  max-width: 680px; margin: 0 auto; padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 18px;
+}
+h1 { font-family: var(--display); font-weight: 400; font-size: clamp(36px, 7vw, 52px); margin: 0; line-height: 1; }
+.sub { color: var(--muted); margin: 6px 0 0; }
+form {
+  background: var(--leaf-soft); border-radius: 16px; padding: 14px;
+  display: grid; grid-template-columns: 1.3fr 1fr 110px auto; gap: 8px; align-items: end;
+}
+@media (max-width: 560px) { form { grid-template-columns: 1fr 1fr; } }
+label { display: grid; gap: 4px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+input { font: 16px var(--body); color: var(--ink); background: var(--card); border: 1.5px solid var(--line); border-radius: 10px; padding: 9px 10px; width: 100%; min-width: 0; }
+.btn { font: 700 15px var(--body); border: 0; border-radius: 10px; padding: 11px 16px; background: var(--leaf); color: var(--card); cursor: pointer; }
+.btn.ghost { background: none; color: var(--muted); border: 1.5px solid var(--line); }
+.btn.warn { background: var(--dry); }
+.btn[disabled] { opacity: .5; cursor: default; }
+:focus-visible { outline: 3px solid var(--leaf); outline-offset: 2px; }
+.msg { color: var(--muted); font-size: 14px; margin: 0; }
+.list { display: grid; gap: 12px; }
+.plant { background: var(--card); border: 1.5px solid var(--line); border-radius: 16px; padding: 16px; display: grid; gap: 12px; }
+.plant.thirsty { border-color: var(--dry); }
+.top { display: flex; gap: 12px; justify-content: space-between; align-items: start; flex-wrap: wrap; }
+.plant h2 { font-family: var(--display); font-weight: 400; font-size: 24px; margin: 0; line-height: 1.1; }
+.plant .kind { color: var(--muted); font-size: 14px; }
+.pill { font-weight: 700; font-size: 13px; border-radius: 999px; padding: 4px 10px; white-space: nowrap; }
+.pill.ok { background: var(--leaf-soft); color: var(--leaf); }
+.pill.due { background: var(--dry-soft); color: var(--dry); }
+.strip { display: grid; grid-template-columns: repeat(28, 1fr); gap: 3px; }
+.strip i { aspect-ratio: 1; border-radius: 50%; background: var(--line); }
+.strip i.w { background: var(--leaf); }
+.strip i.today { outline: 2px solid var(--ink); outline-offset: 1px; }
+.legend { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.empty { background: var(--card); border: 1.5px dashed var(--line); border-radius: 16px; padding: 28px 20px; text-align: center; color: var(--muted); }
+.empty b { display: block; font-family: var(--display); font-weight: 400; font-size: 22px; color: var(--ink); margin-bottom: 6px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Plant Diary</h1>
+    <p class="sub" id="sub">Who needs water, and when they last got it.</p>
+  </header>
+
+  <form id="add">
+    <label for="pName">Name<input id="pName" placeholder="Gerald" required maxlength="40"></label>
+    <label for="pKind">Kind<input id="pKind" placeholder="Monstera" maxlength="40"></label>
+    <label for="pEvery">Every (days)<input id="pEvery" type="number" min="1" max="60" value="7" required></label>
+    <button class="btn" type="submit" id="addBtn">Add plant</button>
+  </form>
+  <p class="msg" id="msg" role="status"></p>
+
+  <div class="list" id="list">
+    <div class="empty"><b>Loading your plants…</b>Your diary is private to you.</div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const today = () => iso(new Date());
+const daysBetween = (a, b) => Math.round((new Date(b + "T12:00") - new Date(a + "T12:00")) / 864e5);
+
+let col = null, plants = [], confirmDel = null;
+
+function status(p) {
+  const last = (p.waterings || []).slice().sort().at(-1);
+  if (!last) return { due: 0, text: "Not watered yet", thirsty: true, last: null };
+  const due = p.every - daysBetween(last, today());
+  if (due < 0) return { due, text: `Thirsty · ${-due} day${due === -1 ? "" : "s"} overdue`, thirsty: true, last };
+  if (due === 0) return { due, text: "Water today", thirsty: true, last };
+  return { due, text: `Next in ${due} day${due === 1 ? "" : "s"}`, thirsty: false, last };
+}
+
+function render() {
+  const n = plants.length, thirsty = plants.filter(p => status(p).thirsty).length;
+  $("#sub").textContent = n ? `${n} plant${n === 1 ? "" : "s"} · ${thirsty ? thirsty + " need water" : "everyone's watered"}` : "Who needs water, and when they last got it.";
+  if (!n) { $("#list").innerHTML = `<div class="empty"><b>No plants yet</b>Add your first one above. Its watering history shows up here.</div>`; return; }
+  const sorted = plants.slice().sort((a, b) => status(a).due - status(b).due);
+  const t = today();
+  $("#list").innerHTML = sorted.map(p => {
+    const s = status(p), w = new Set(p.waterings || []);
+    const dots = Array.from({ length: 28 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() - 27 + i); const k = iso(d); return `<i class="${w.has(k) ? "w" : ""} ${k === t ? "today" : ""}" title="${k}${w.has(k) ? " · watered" : ""}"></i>`; }).join("");
+    const lastTxt = s.last ? (daysBetween(s.last, t) === 0 ? "Watered today" : `Last watered ${daysBetween(s.last, t)} days ago`) : "No waterings logged";
+    const asking = confirmDel === p.id;
+    return `<article class="plant ${s.thirsty ? "thirsty" : ""}">
+      <div class="top"><div><h2>${esc(p.name)}</h2><div class="kind">${esc(p.kind || "Plant")} · every ${p.every} days</div></div><span class="pill ${s.thirsty ? "due" : "ok"}">${s.text}</span></div>
+      <div><div class="strip" aria-label="Waterings in the last 4 weeks">${dots}</div><div class="legend"><span>4 weeks ago</span><span>${lastTxt}</span><span>today</span></div></div>
+      <div class="actions">
+        <button class="btn" data-act="water" data-id="${p.id}" type="button" ${w.has(t) ? "disabled" : ""}>${w.has(t) ? "Watered today" : "Water now"}</button>
+        ${w.has(t) ? `<button class="btn ghost" data-act="undo" data-id="${p.id}" type="button">Undo</button>` : ""}
+        ${asking
+          ? `<span class="msg">Remove ${esc(p.name)} and its history?</span><button class="btn warn" data-act="del" data-id="${p.id}" type="button">Remove</button><button class="btn ghost" data-act="keep" type="button">Keep</button>`
+          : `<button class="btn ghost" data-act="ask" data-id="${p.id}" type="button">Remove…</button>`}
+      </div>
+    </article>`;
+  }).join("");
+}
+
+const fail = e => { $("#msg").textContent = e?.code === "quota_exceeded" ? "Your diary is full. Remove a plant to add another." : "That didn't save. Check your connection and try again."; };
+
+$("#list").addEventListener("click", async e => {
+  const b = e.target.closest("button[data-act]"); if (!b || !col) return;
+  const p = plants.find(x => x.id === b.dataset.id), act = b.dataset.act;
+  if (act === "ask") { confirmDel = p.id; return render(); }
+  if (act === "keep") { confirmDel = null; return render(); }
+  b.disabled = true;
+  try {
+    if (act === "water") await col.doc(p.id).update({ waterings: [...new Set([...(p.waterings || []), today()])].sort().slice(-120) });
+    if (act === "undo") await col.doc(p.id).update({ waterings: (p.waterings || []).filter(d => d !== today()) });
+    if (act === "del") { confirmDel = null; await col.doc(p.id).delete(); }
+    $("#msg").textContent = "";
+  } catch (err) { fail(err); b.disabled = false; }
+});
+
+$("#add").addEventListener("submit", async e => {
+  e.preventDefault(); if (!col) return;
+  const name = $("#pName").value.trim(), every = Math.max(1, Math.min(60, +$("#pEvery").value || 7));
+  if (!name) return;
+  $("#addBtn").disabled = true;
+  try {
+    await col.add({ name, kind: $("#pKind").value.trim(), every, waterings: [], created: today() });
+    $("#pName").value = ""; $("#pKind").value = ""; $("#msg").textContent = `Added ${name}.`;
+  } catch (err) { fail(err); }
+  $("#addBtn").disabled = false;
+});
+
+(async () => {
+  const off = text => { $("#list").innerHTML = `<div class="empty"><b>Diary unavailable</b>${text}</div>`; $("#addBtn").disabled = true; };
+  const use = n => window.claude?.use ? window.claude.use(n).catch(() => null) : Promise.resolve(null);
+  const [db, user] = await Promise.all([use("db"), use("user")]);
+  const uid = user ? await user.id() : null;
+  if (!db || !uid) return off("Sign in to claude.ai to keep your plant diary here. It's saved to your account and private to you.");
+  col = db.collection("data/users/" + uid);
+  const timer = setTimeout(() => { $("#msg").textContent = "Still reaching your diary. It may be out of date until it connects."; }, 10000);
+  col.onSnapshot(snap => {
+    if (!snap.metadata.fromCache) { clearTimeout(timer); if ($("#msg").textContent.startsWith("Still")) $("#msg").textContent = ""; }
+    plants = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    render();
+  }, err => { clearTimeout(timer); off("Your diary couldn't load right now. Reopen the page to try again."); });
+})();
+</script>

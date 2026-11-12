@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Al-Ameen OS</title>
+<style>body { margin: 0; } [hidden] { display: none !important; }</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+/* Layout: a toy desktop OS. Each app window wears a different style: magazine, terminal, gallery, link hub, journal. */
+:root {
+  --desk: #c7cffd;
+  --desk-dot: #a7b2f2;
+  --win: #ffffff;
+  --win-2: #f1f2fb;
+  --ink: #15141c;
+  --muted: #5b5d78;
+  --cobalt: #2a35e8;
+  --sun: #ffd23f;
+  --bubble: #ff8fc7;
+  --mint: #5be3b0;
+  --term-bg: #12122a;
+  --term-fg: #d8dcff;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --serif: "Instrument Serif", Georgia, "Times New Roman", serif;
+  --mono: "JetBrains Mono", Consolas, "Courier New", monospace;
+  --bar-h: 48px;
+  color-scheme: light;
+}
+html, body { height: 100%; }
+body {
+  background: var(--desk);
+  color: var(--ink);
+  font-family: var(--display);
+  font-size: 15px;
+  overflow: hidden;
+}
+* { box-sizing: border-box; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 3px solid var(--cobalt); outline-offset: 2px; }
+a { color: var(--cobalt); }
+
+/* ---------- desktop ---------- */
+.desk {
+  position: fixed; inset: 0 0 calc(var(--bar-h) + env(safe-area-inset-bottom, 0px)) 0;
+  background-color: var(--desk);
+  background-image: radial-gradient(var(--desk-dot) 1.4px, transparent 1.6px);
+  background-size: 22px 22px;
+  overflow: hidden;
+  transition: background-color .6s;
+}
+body.party .desk { animation: party 3s linear infinite; }
+@keyframes party { to { filter: hue-rotate(360deg); } }
+
+.icons {
+  position: absolute;
+  top: max(16px, env(safe-area-inset-top, 0px));
+  left: max(16px, env(safe-area-inset-left, 0px));
+  display: grid; grid-auto-flow: row; gap: 10px;
+}
+.icon {
+  width: 88px; padding: 8px 4px; border: 0; background: none;
+  display: grid; justify-items: center; gap: 6px;
+  border-radius: 10px; font-size: 12.5px; font-weight: 600;
+}
+.icon:hover, .icon:focus-visible { background: rgba(255,255,255,.45); }
+.glyph {
+  width: 48px; height: 48px; border: 2px solid var(--ink); border-radius: 12px;
+  display: grid; place-items: center; box-shadow: 3px 3px 0 var(--ink);
+  font-family: var(--mono); font-weight: 700; font-size: 15px;
+}
+.icon span:last-child { background: var(--win); padding: 1px 6px; border-radius: 4px; }
+
+.wordmark {
+  position: absolute; right: max(24px, env(safe-area-inset-right, 0px)); bottom: 18px;
+  font-family: var(--serif); font-style: italic; font-size: clamp(56px, 11vw, 150px);
+  line-height: .85; color: var(--desk-dot); pointer-events: none; text-align: right;
+  user-select: none;
+}
+
+/* googly eyes */
+.watcher {
+  position: absolute; right: max(32px, env(safe-area-inset-right, 0px)); top: 24px;
+  display: flex; gap: 6px; padding: 10px 14px; background: var(--sun);
+  border: 2px solid var(--ink); border-radius: 999px; box-shadow: 3px 3px 0 var(--ink);
+}
+.eye { width: 34px; height: 34px; border-radius: 50%; background: var(--win); border: 2px solid var(--ink); position: relative; }
+.pupil { position: absolute; width: 14px; height: 14px; border-radius: 50%; background: var(--ink); left: 8px; top: 8px; }
+
+/* ---------- windows ---------- */
+.win {
+  position: absolute; display: flex; flex-direction: column;
+  background: var(--win); border: 2px solid var(--ink); border-radius: 12px;
+  box-shadow: 6px 6px 0 var(--ink); overflow: hidden;
+  max-width: calc(100vw - 24px);
+}
+.win.front { box-shadow: 8px 8px 0 var(--cobalt); }
+.bar {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 14px;
+  border-bottom: 2px solid var(--ink); background: var(--win-2);
+  cursor: grab; user-select: none; touch-action: none; flex: none;
+}
+.win.front .bar { background: var(--sun); }
+.bar .t { font-family: var(--mono); font-size: 13px; font-weight: 700; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.x {
+  width: 26px; height: 26px; border: 2px solid var(--ink); border-radius: 7px;
+  background: var(--win); font-weight: 800; line-height: 1; display: grid; place-items: center;
+}
+.x:hover { background: var(--bubble); }
+.body { overflow: auto; flex: 1; min-height: 0; }
+
+/* ---------- about.mag (editorial) ---------- */
+.mag .cover { padding: 22px 26px 18px; background: var(--bubble); border-bottom: 2px solid var(--ink); }
+.mag .issue { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
+.mag h1 {
+  font-family: var(--serif); font-weight: 400; font-size: clamp(54px, 9vw, 92px);
+  line-height: .9; margin: 14px 0 10px; letter-spacing: -.02em; text-wrap: balance;
+}
+.mag h1 em { color: var(--cobalt); }
+.mag .dek { font-size: 18px; max-width: 34ch; margin: 0; font-weight: 600; text-wrap: balance; }
+.mag .inside { padding: 22px 26px 28px; display: grid; gap: 22px; }
+.mag .lede { font-family: var(--serif); font-size: 21px; line-height: 1.35; margin: 0; max-width: 60ch; }
+.mag .lede::first-letter { font-size: 3.1em; float: left; line-height: .8; padding: 6px 8px 0 0; color: var(--cobalt); }
+.kicker { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+.cv { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.cv li { display: grid; grid-template-columns: 120px 1fr; gap: 12px; padding: 10px 0; border-top: 1.5px solid var(--ink); }
+.cv li:last-child { border-bottom: 1.5px solid var(--ink); }
+.cv .when { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; padding-top: 2px; }
+.cv b { display: block; }
+.cv span { color: var(--muted); font-size: 14px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1.5px solid var(--ink); border-radius: 999px; padding: 3px 10px; font-size: 13px; font-weight: 600; background: var(--win); }
+.now { margin: 0; padding-left: 18px; line-height: 1.6; }
+
+/* ---------- projects/ (gallery) ---------- */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; padding: 16px; }
+.card {
+  border: 2px solid var(--ink); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column;
+  background: var(--win); text-decoration: none; color: var(--ink); transition: transform .15s, box-shadow .15s;
+}
+.card:hover { transform: translate(-2px, -2px); box-shadow: 4px 4px 0 var(--ink); }
+.swatch { height: 92px; border-bottom: 2px solid var(--ink); display: grid; place-items: center; font-family: var(--serif); font-size: 44px; font-style: italic; }
+.card .meta { padding: 10px 12px 12px; display: grid; gap: 4px; }
+.card .meta b { font-size: 16px; }
+.card .meta small { font-family: var(--mono); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.card .meta p { margin: 0; font-size: 13.5px; line-height: 1.4; color: var(--muted); }
+
+/* ---------- terminal ---------- */
+.term .body { background: var(--term-bg); color: var(--term-fg); font-family: var(--mono); font-size: 13.5px; line-height: 1.55; padding: 12px 14px; }
+.term pre { margin: 0; white-space: pre-wrap; word-break: break-word; font: inherit; }
+.term .p { color: var(--mint); }
+.term .hl { color: var(--sun); }
+.term .row { display: flex; gap: 8px; }
+.term input { flex: 1; min-width: 0; background: transparent; border: 0; color: inherit; font: inherit; outline: none; caret-color: var(--bubble); }
+
+/* ---------- links ---------- */
+.links .body { padding: 18px; display: grid; gap: 10px; align-content: start; background: var(--win-2); }
+.me-mini { display: flex; gap: 12px; align-items: center; margin-bottom: 6px; }
+.avatar { width: 56px; height: 56px; border-radius: 50%; border: 2px solid var(--ink); background: var(--mint); display: grid; place-items: center; font-family: var(--serif); font-size: 28px; flex: none; }
+.me-mini b { display: block; font-size: 17px; }
+.me-mini span { color: var(--muted); font-size: 13px; }
+.lnk {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  padding: 12px 14px; border: 2px solid var(--ink); border-radius: 10px; background: var(--win);
+  color: var(--ink); text-decoration: none; font-weight: 600; box-shadow: 3px 3px 0 var(--ink);
+  transition: transform .12s, box-shadow .12s;
+}
+.lnk:hover { transform: translate(1px, 1px); box-shadow: 1px 1px 0 var(--ink); background: var(--sun); }
+.lnk small { font-family: var(--mono); font-weight: 400; font-size: 11px; color: var(--muted); }
+.copy { display: flex; gap: 8px; align-items: center; padding: 10px 12px; border: 2px dashed var(--ink); border-radius: 10px; font-family: var(--mono); font-size: 13px; }
+.copy span { flex: 1; min-width: 0; overflow-wrap: anywhere; user-select: all; }
+.copy button { border: 2px solid var(--ink); border-radius: 7px; background: var(--win); padding: 3px 10px; font-family: var(--display); font-weight: 600; font-size: 12px; }
+
+/* ---------- journal ---------- */
+.journal .body { display: grid; grid-template-columns: 200px 1fr; }
+.posts { border-right: 2px solid var(--ink); background: var(--win-2); overflow: auto; }
+.posts button { display: block; width: 100%; text-align: left; border: 0; border-bottom: 1.5px solid var(--ink); background: none; padding: 12px 14px; }
+.posts button[aria-current="true"] { background: var(--cobalt); color: var(--win); }
+.posts button small { display: block; font-family: var(--mono); font-size: 11px; opacity: .75; margin-top: 3px; font-variant-numeric: tabular-nums; }
+.post { padding: 22px 26px 30px; overflow: auto; min-width: 0; }
+.post h2 { font-family: var(--serif); font-weight: 400; font-size: 36px; line-height: 1.05; margin: 0 0 6px; text-wrap: balance; }
+.post time { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.post p { font-size: 16px; line-height: 1.65; max-width: 62ch; }
+
+/* ---------- note + trash ---------- */
+.note { background: var(--sun); }
+.note .bar { background: var(--sun); }
+.note .body { padding: 14px 16px 16px; font-size: 14px; line-height: 1.5; }
+.note .body p { margin: 0 0 8px; }
+.trash .body { padding: 18px; font-size: 14px; line-height: 1.5; }
+
+/* ---------- taskbar ---------- */
+.taskbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 9000;
+  height: calc(var(--bar-h) + env(safe-area-inset-bottom, 0px));
+  padding: 6px max(8px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px));
+  display: flex; align-items: center; gap: 8px; background: var(--win); border-top: 2px solid var(--ink);
+}
+.start { border: 2px solid var(--ink); border-radius: 8px; background: var(--cobalt); color: var(--win); font-weight: 800; padding: 5px 12px; height: 34px; flex: none; }
+.tasks { display: flex; gap: 6px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.task { border: 2px solid var(--ink); border-radius: 8px; background: var(--win-2); font-family: var(--mono); font-size: 12px; padding: 0 10px; height: 34px; white-space: nowrap; flex: none; }
+.task.on { background: var(--sun); }
+.clock { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; flex: none; padding: 0 6px; }
+.menu {
+  position: fixed; z-index: 9001; left: max(8px, env(safe-area-inset-left, 0px)); bottom: calc(var(--bar-h) + env(safe-area-inset-bottom, 0px) + 6px);
+  width: 230px; background: var(--win); border: 2px solid var(--ink); border-radius: 12px; box-shadow: 5px 5px 0 var(--ink); overflow: hidden;
+}
+.menu .who { background: var(--cobalt); color: var(--win); padding: 14px; font-family: var(--serif); font-size: 26px; font-style: italic; line-height: 1; }
+.menu button { display: flex; gap: 10px; align-items: center; width: 100%; border: 0; background: none; text-align: left; padding: 10px 14px; font-weight: 600; }
+.menu button:hover, .menu button:focus-visible { background: var(--sun); }
+.menu button code { font-family: var(--mono); font-size: 12px; width: 26px; }
+
+/* ---------- phones: windows become sheets ---------- */
+@media (max-width: 720px) {
+  .icons { grid-template-columns: repeat(3, 88px); }
+  .wordmark { font-size: 64px; }
+  .watcher { top: auto; bottom: 90px; right: 16px; }
+  .win {
+    left: max(8px, env(safe-area-inset-left, 0px)) !important; right: max(8px, env(safe-area-inset-right, 0px)) !important;
+    top: max(8px, env(safe-area-inset-top, 0px)) !important; bottom: 10px !important;
+    width: auto !important; height: auto !important; max-width: none;
+  }
+  .note.win { bottom: auto !important; }
+  .bar { cursor: default; }
+  .journal .body { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  .posts { border-right: 0; border-bottom: 2px solid var(--ink); max-height: 150px; }
+  .mag .cover, .mag .inside { padding-left: 18px; padding-right: 18px; }
+  .cv li { grid-template-columns: 1fr; gap: 2px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.party .desk { animation: none; background-color: var(--bubble); }
+  .card, .lnk { transition: none; }
+}
+</style>
+</head>
+<body>
+
+<main class="desk" id="desk">
+  <div class="wordmark" aria-hidden="true" id="wordmark"></div>
+  <div class="watcher" aria-hidden="true"><div class="eye"><div class="pupil"></div></div><div class="eye"><div class="pupil"></div></div></div>
+  <nav class="icons" id="icons" aria-label="Apps"></nav>
+</main>
+
+<div class="menu" id="menu" hidden></div>
+<footer class="taskbar">
+  <button class="start" id="start" aria-expanded="false" aria-controls="menu">start</button>
+  <div class="tasks" id="tasks"></div>
+  <div class="clock" id="clock"></div>
+</footer>
+
+<script>
+/* ============================================================
+   EDIT ME: everything personal on the site comes from this object.
+   ============================================================ */
+const ME = {
+  name: "Al-Ameen Adediran",
+  first: "Al-Ameen",
+  initials: "AA",
+  handle: "alameen",
+  role: "student, Air Cadet sergeant & IT problem-solver",
+  location: "Dauphin, Manitoba",
+  email: "",
+  dek: "High school student, Air Cadet sergeant, and the person who figures out why it's broken.",
+  bio: "I'm a high school student in Dauphin, Manitoba, and I like solving problems, whether that's an IT setup at cadet camp, a register that won't balance, or a math question a younger kid is stuck on. I've been an Air Cadet since 2021, I work at the Dauphin Co-op, and I build things like this site in my spare time.",
+  now: [
+    "Studying at Dauphin Regional Comprehensive Secondary School",
+    "Working as a stock clerk and cashier at Dauphin Co-op",
+    "Refereeing rec soccer and tutoring math",
+  ],
+  experience: [
+    { when: "Jun to Aug 2026", what: "IT Staff Cadet", where: "Rocky Mountain CTC. Ran IT operations for the summer, and my IT project was picked by regional command to roll out across the region." },
+    { when: "2025 to now", what: "Stock Clerk & Cashier", where: "Dauphin Co-op. Stocking, inventory rotation, and register work." },
+    { when: "Ongoing", what: "Tutor (self-employed)", where: "Math and basic computer skills for younger kids, plus help for classmates." },
+    { when: "Ongoing", what: "Lawn mowing & snow ploughing", where: "My own seasonal business." },
+    { when: "Summer 2023", what: "Young Workers Program", where: "Manitoba Youth Job Centre. Helped small businesses at community events." },
+    { when: "2024 to now", what: "Dauphin Regional Comprehensive Secondary School", where: "Honours, 2025." },
+  ],
+  skills: ["IT support", "Problem-solving", "Customer service", "Microsoft Office", "Cash handling", "Teamwork", "Tutoring", "First Aid certified"],
+  honours: [
+    "Rocky Mountain Commanding Officer's Coin",
+    "RCSU (NW) Commanding Officer's Coin",
+    "Sergeant, Royal Canadian Air Cadets (since 2021)",
+    "Air Cadet Survival Instructor Course, 2025",
+    "Manitoba Summer Games participant, 2024",
+    "Two-time divisional champion, middle school volleyball (2022, 2023)",
+    "Trained rec soccer referee (2024 to now)",
+  ],
+  projects: [
+    { name: "Roto Cam", year: 2026, kind: "camera toy", blurb: "Rotoscopes a live camera feed into ink lines and flat cel colors, like a hand-drawn film.", url: "projects/roto-cam.html", color: "#ffd23f", mark: "◐" },
+    { name: "Pocket Weather", year: 2026, kind: "app", blurb: "A forecast that tells you what to wear, not just the numbers.", url: "projects/pocket-weather.html", color: "#5be3b0", mark: "☂" },
+    { name: "Zine Machine", year: 2026, kind: "tool", blurb: "Turns your notes into an eight-page mini zine you print on one sheet and fold.", url: "projects/zine-machine.html", color: "#ff8fc7", mark: "Z" },
+    { name: "Plant Diary", year: 2026, kind: "side project", blurb: "A watering log that shows which plants are thirsty and when each one last got water.", url: "projects/plant-diary.html", color: "#c7cffd", mark: "✿" },
+  ],
+  links: [],
+  posts: [
+    { title: "Why I made my website an operating system", date: "2026-11-03", body: [
+      "Most personal sites look the same: a photo, a paragraph, three links. I wanted mine to feel like a desktop you can poke around in.",
+      "Each window has its own style: a magazine cover for the about page, a terminal for the curious, a gallery for my projects. Drag them around and try typing help in the terminal.",
+    ]},
+  ],
+};
+
+/* ============================================================
+   The OS
+   ============================================================ */
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const desk = $("#desk");
+const mobile = () => matchMedia("(max-width: 720px)").matches;
+
+const APPS = [
+  { id: "about",    title: "about.mag",    glyph: "Aa", color: "var(--bubble)", w: 600, h: 640, cls: "mag" },
+  { id: "projects", title: "projects/",    glyph: "▦",  color: "var(--mint)",   w: 640, h: 470 },
+  { id: "terminal", title: "terminal",     glyph: ">_", color: "var(--term-bg)", w: 560, h: 360, cls: "term", fg: "var(--term-fg)" },
+  { id: "links",    title: "links.url",    glyph: "↗",  color: "var(--sun)",    w: 360, h: 460, cls: "links" },
+  { id: "journal",  title: "journal.txt",  glyph: "✎",  color: "var(--win)",    w: 700, h: 480, cls: "journal" },
+  { id: "trash",    title: "trash",        glyph: "⌫",  color: "var(--win-2)",  w: 300, h: 190, cls: "trash" },
+];
+const NOTE = { id: "note", title: "readme.sticky", w: 270, cls: "note" };
+
+let z = 10;
+const wins = {};
+
+function makeWin(app, html) {
+  const el = document.createElement("section");
+  el.className = "win " + (app.cls || "");
+  el.id = "w-" + app.id;
+  el.setAttribute("role", "dialog");
+  el.setAttribute("aria-label", app.title);
+  el.hidden = true;
+  el.style.width = app.w + "px";
+  if (app.h) el.style.height = app.h + "px";
+  el.innerHTML = `<header class="bar"><span class="t">${esc(app.title)}</span><button class="x" aria-label="Close ${esc(app.title)}">×</button></header><div class="body">${html}</div>`;
+  desk.appendChild(el);
+  el.addEventListener("pointerdown", () => focusWin(app.id));
+  $(".x", el).addEventListener("click", e => { e.stopPropagation(); closeWin(app.id); });
+  drag(el, $(".bar", el));
+  wins[app.id] = { el, app, placed: false };
+  return el;
+}
+
+function place(id, x, y) {
+  const { el } = wins[id];
+  const r = desk.getBoundingClientRect();
+  const w = Math.min(el.offsetWidth, r.width - 24);
+  const h = Math.min(wins[id].app.h || el.offsetHeight, r.height - 24);
+  if (wins[id].app.h) el.style.height = h + "px";
+  el.style.left = Math.max(12, Math.min(x, r.width - w - 12)) + "px";
+  el.style.top = Math.max(12, Math.min(y, r.height - h - 12)) + "px";
+  wins[id].placed = true;
+}
+
+function openWin(id) {
+  const w = wins[id];
+  w.el.hidden = false;
+  if (!w.placed) {
+    const r = desk.getBoundingClientRect(), n = Object.values(wins).filter(v => !v.el.hidden).length;
+    place(id, (r.width - w.el.offsetWidth) / 2 + n * 18, 40 + n * 22);
+  }
+  focusWin(id);
+  if (id === "terminal") setTimeout(() => $("#cmd")?.focus(), 0);
+  renderTasks();
+}
+function closeWin(id) { wins[id].el.hidden = true; wins[id].el.classList.remove("front"); renderTasks(); }
+function focusWin(id) {
+  Object.values(wins).forEach(w => w.el.classList.remove("front"));
+  wins[id].el.style.zIndex = ++z;
+  wins[id].el.classList.add("front");
+  renderTasks();
+}
+
+function drag(el, handle) {
+  let sx, sy, ox, oy, on = false;
+  handle.addEventListener("pointerdown", e => {
+    if (e.target.closest(".x") || mobile()) return;
+    on = true; sx = e.clientX; sy = e.clientY; ox = el.offsetLeft; oy = el.offsetTop;
+    handle.setPointerCapture(e.pointerId); handle.style.cursor = "grabbing";
+  });
+  handle.addEventListener("pointermove", e => {
+    if (!on) return;
+    const r = desk.getBoundingClientRect();
+    el.style.left = Math.max(-el.offsetWidth + 80, Math.min(ox + e.clientX - sx, r.width - 80)) + "px";
+    el.style.top = Math.max(0, Math.min(oy + e.clientY - sy, r.height - 40)) + "px";
+  });
+  const end = () => { on = false; handle.style.cursor = ""; };
+  handle.addEventListener("pointerup", end);
+  handle.addEventListener("pointercancel", end);
+}
+
+/* ---------- app contents ---------- */
+const today = new Date();
+const issue = today.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+
+const aboutHTML = `
+  <div class="cover">
+    <div class="issue"><span>Issue Nº 01</span><span>${issue}</span></div>
+    <h1>${esc(ME.name.split(" ")[0])} <em>${esc(ME.name.split(" ").slice(1).join(" ") || "")}</em></h1>
+    <p class="dek">${esc(ME.dek)}</p>
+  </div>
+  <div class="inside">
+    <p class="lede">${esc(ME.bio)}</p>
+    <div><p class="kicker">The résumé</p><ul class="cv">${ME.experience.map(x => `<li><span class="when">${esc(x.when)}</span><div><b>${esc(x.what)}</b><span>${esc(x.where)}</span></div></li>`).join("")}</ul></div>
+    <div><p class="kicker">Good at</p><div class="chips">${ME.skills.map(s => `<span class="chip">${esc(s)}</span>`).join("")}</div></div>
+    <div><p class="kicker">Honours & cadets</p><ul class="now">${ME.honours.map(s => `<li>${esc(s)}</li>`).join("")}</ul></div>
+    <div><p class="kicker">Now</p><ul class="now">${ME.now.map(s => `<li>${esc(s)}</li>`).join("")}</ul></div>
+  </div>`;
+
+const projectsHTML = `<div class="grid">${ME.projects.map(p => `
+  <a class="card" href="${esc(p.url)}" target="_blank" rel="noopener">
+    <div class="swatch" style="background:${esc(p.color)}">${esc(p.mark)}</div>
+    <div class="meta"><small>${esc(p.kind)} · ${p.year}</small><b>${esc(p.name)}</b><p>${esc(p.blurb)}</p></div>
+  </a>`).join("")}</div>`;
+
+const linksHTML = `
+  <div class="me-mini"><div class="avatar">${esc(ME.initials)}</div><div><b>${esc(ME.name)}</b><span>@${esc(ME.handle)} · ${esc(ME.location)}</span></div></div>
+  ${ME.links.map(l => `<a class="lnk" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)} <small>${esc(l.note)} ↗</small></a>`).join("")}
+  ${ME.email ? `<div class="copy"><span id="mail">${esc(ME.email)}</span><button id="copyMail" type="button">Copy</button></div>` : ""}
+  ${!ME.links.length && !ME.email ? `<p class="kicker">More links coming soon.</p>` : ""}`;
+
+const journalHTML = `<div class="posts" id="posts">${ME.posts.map((p, i) => `<button type="button" data-i="${i}">${esc(p.title)}<small>${esc(p.date)}</small></button>`).join("")}</div><article class="post" id="post"></article>`;
+
+const termHTML = `<pre id="out"></pre><div class="row"><span class="p">guest@${esc(ME.handle)}:~$</span><input id="cmd" aria-label="Terminal command" autocomplete="off" spellcheck="false"></div>`;
+
+const trashHTML = `<p><b>Trash is empty.</b></p><p>Every bad idea got recycled into a slightly better one.</p>`;
+
+const noteHTML = `<p><b>Welcome to my desktop.</b></p><p>Open anything from the icons or the start menu, and drag windows by their title bars.</p><p>Try the terminal and type <code>help</code>.</p>`;
+
+const html = { about: aboutHTML, projects: projectsHTML, terminal: termHTML, links: linksHTML, journal: journalHTML, trash: trashHTML };
+APPS.forEach(a => makeWin(a, html[a.id]));
+makeWin(NOTE, noteHTML);
+
+/* journal */
+function showPost(i) {
+  const p = ME.posts[i];
+  $("#post").innerHTML = `<h2>${esc(p.title)}</h2><time>${esc(p.date)}</time>${p.body.map(b => `<p>${esc(b)}</p>`).join("")}`;
+  document.querySelectorAll("#posts button").forEach(b => b.setAttribute("aria-current", b.dataset.i == i));
+}
+$("#posts").addEventListener("click", e => { const b = e.target.closest("button"); if (b) showPost(+b.dataset.i); });
+showPost(0);
+
+/* copy email */
+$("#copyMail")?.addEventListener("click", e => {
+  const btn = e.currentTarget;
+  navigator.clipboard.writeText(ME.email).then(() => { btn.textContent = "Copied"; }, () => {
+    const r = document.createRange(); r.selectNodeContents($("#mail"));
+    const s = getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = "Selected";
+  });
+  setTimeout(() => { btn.textContent = "Copy"; }, 1600);
+});
+
+/* ---------- terminal ---------- */
+const out = $("#out"), cmd = $("#cmd"), hist = []; let hi = 0;
+const print = s => { out.innerHTML += s + "\n"; out.parentElement.scrollTop = 1e9; };
+const CMDS = {
+  help: () => `<span class="hl">commands</span>
+  whoami      who runs this place
+  about       the short version
+  projects    things I've made
+  links       where else to find me
+  posts       journal entries
+  open &lt;app&gt;  about, projects, links, journal, trash
+  date        what time it is here
+  party       you'll see
+  clear       wipe the screen`,
+  whoami: () => `${esc(ME.name)}, ${esc(ME.role)}, based in ${esc(ME.location)}.`,
+  about: () => esc(ME.bio),
+  projects: () => ME.projects.map((p, i) => `${i + 1}. <span class="hl">${esc(p.name)}</span> (${p.year}) ${esc(p.blurb)}`).join("\n"),
+  links: () => ME.links.map(l => `${esc(l.label.padEnd(11))} <a href="${esc(l.url)}" target="_blank" rel="noopener" style="color:var(--mint)">${esc(l.url)}</a>`).join("\n") + (ME.email ? `\nemail       ${esc(ME.email)}` : "") || "more links coming soon.",
+  posts: () => ME.posts.map(p => `${p.date}  ${esc(p.title)}`).join("\n") + `\n(type <span class="hl">open journal</span> to read them)`,
+  date: () => new Date().toString(),
+  party: () => { document.body.classList.toggle("party"); return document.body.classList.contains("party") ? "party mode on. type party again to stop." : "party's over."; },
+  sudo: () => "nice try.",
+  ls: () => APPS.map(a => a.title).join("   "),
+  clear: () => { out.innerHTML = ""; return null; },
+  open: arg => wins[arg] ? (openWin(arg), `opening ${wins[arg].app.title}`) : `no app called "${esc(arg || "")}". try: ${APPS.map(a => a.id).join(", ")}`,
+};
+print(`Welcome to <span class="hl">${esc(ME.first)}OS</span>. Type <span class="hl">help</span> to look around.`);
+cmd.addEventListener("keydown", e => {
+  if (e.key === "ArrowUp") { hi = Math.max(0, hi - 1); cmd.value = hist[hi] || ""; e.preventDefault(); return; }
+  if (e.key === "ArrowDown") { hi = Math.min(hist.length, hi + 1); cmd.value = hist[hi] || ""; e.preventDefault(); return; }
+  if (e.key !== "Enter") return;
+  const raw = cmd.value.trim(); cmd.value = "";
+  if (!raw) return;
+  hist.push(raw); hi = hist.length;
+  print(`<span class="p">guest@${esc(ME.handle)}:~$</span> ${esc(raw)}`);
+  const [name, ...rest] = raw.toLowerCase().split(/\s+/);
+  const fn = CMDS[name];
+  const res = fn ? fn(rest.join(" ")) : `command not found: ${esc(name)}. type help.`;
+  if (res !== null) print(res);
+});
+$("#w-terminal .body").addEventListener("click", () => cmd.focus());
+
+/* ---------- desktop icons, taskbar, menu ---------- */
+$("#icons").innerHTML = APPS.map(a => `<button class="icon" data-app="${a.id}"><span class="glyph" style="background:${a.color};color:${a.fg || "var(--ink)"}">${a.glyph}</span><span>${a.title}</span></button>`).join("");
+$("#icons").addEventListener("click", e => { const b = e.target.closest(".icon"); if (b) openWin(b.dataset.app); });
+$("#wordmark").innerHTML = `${esc(ME.first)}<br>OS`;
+
+function renderTasks() {
+  $("#tasks").innerHTML = Object.values(wins).filter(w => !w.el.hidden).map(w =>
+    `<button class="task ${w.el.classList.contains("front") ? "on" : ""}" data-app="${w.app.id}">${esc(w.app.title)}</button>`).join("");
+}
+$("#tasks").addEventListener("click", e => { const b = e.target.closest(".task"); if (b) focusWin(b.dataset.app); });
+
+const menu = $("#menu"), start = $("#start");
+menu.innerHTML = `<div class="who">${esc(ME.name)}</div>` + APPS.map(a => `<button data-app="${a.id}"><code>${a.glyph}</code>${a.title}</button>`).join("") + `<button data-app="note"><code>!</code>readme.sticky</button>`;
+start.addEventListener("click", () => { menu.hidden = !menu.hidden; start.setAttribute("aria-expanded", !menu.hidden); });
+menu.addEventListener("click", e => { const b = e.target.closest("button"); if (b) { openWin(b.dataset.app); menu.hidden = true; start.setAttribute("aria-expanded", "false"); } });
+document.addEventListener("pointerdown", e => { if (!menu.hidden && !e.target.closest("#menu, #start")) { menu.hidden = true; start.setAttribute("aria-expanded", "false"); } });
+
+const tick = () => { $("#clock").textContent = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); };
+tick(); setInterval(tick, 15000);
+
+/* ---------- googly eyes ---------- */
+const pupils = document.querySelectorAll(".pupil");
+addEventListener("pointermove", e => {
+  pupils.forEach(p => {
+    const r = p.parentElement.getBoundingClientRect();
+    const a = Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2));
+    p.style.transform = `translate(${Math.cos(a) * 7}px, ${Math.sin(a) * 7}px)`;
+  });
+});
+
+/* ---------- opening layout ---------- */
+function boot() {
+  const r = desk.getBoundingClientRect();
+  if (mobile()) {
+    ["about", "note"].forEach(id => { wins[id].placed = true; openWin(id); });
+    return;
+  }
+  const W = r.width;
+  ["projects", "terminal", "about", "note"].forEach(id => wins[id].el.hidden = false);
+  place("projects", W - 700, 120);
+  place("terminal", 130, r.height - 400);
+  place("about", Math.max(130, W * 0.28), 24);
+  place("note", W - 320, 100);
+  ["projects", "terminal", "note", "about"].forEach(focusWin);
+}
+boot();
+</script>
+</body>
+</html>
